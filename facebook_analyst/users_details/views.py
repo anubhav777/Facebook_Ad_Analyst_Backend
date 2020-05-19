@@ -1,8 +1,9 @@
 from django.shortcuts import render
 from rest_framework import viewsets,permissions
 from rest_framework.decorators import action,api_view
+from rest_framework.parsers import JSONParser
 from  .models import Usersearchhistory
-from .serializers import Userserializer,UserSearchdisp
+from .serializers import Userserializer,UserSearchdisp,Uservalidator
 from rest_framework.response import Response
 from django.contrib.auth.models import User
 import json
@@ -65,3 +66,34 @@ class displaysearch(viewsets.ModelViewSet):
     serializer_class=UserSearchdisp
 
 
+@api_view(['POST'])
+def email_validator(request,email):
+    new_user=User.objects.get(email=email)
+    print(new_user)
+    # data={
+    # }
+    # data["is_staff"]="True"
+   
+    print(request.data)
+
+    serializers=Uservalidator(new_user,data=request.data)
+    if serializers.is_valid():
+        serializers.save()
+        return Response({'status':'hi'})
+    else:
+        return Response({'status':'err'})
+
+@api_view(['POST'])
+def reset_password(request,id):
+    new_user=User.objects.get(id=id)
+    data={
+        "email":new_user.email,
+        "username":new_user.username,
+        "password":request.data['password']
+    }
+    print(new_user.username)
+    serializer=Userserializer(new_user,data=data)
+    if serializer.is_valid():
+        serializer.save()
+        return Response({'status':'updated'})
+    return Response({'sataus':'error'})

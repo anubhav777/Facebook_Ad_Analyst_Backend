@@ -3,6 +3,11 @@ import requests
 from bs4 import BeautifulSoup
 from datetime import datetime
 from .models import Pagesdetail
+from django.core.mail import send_mail
+import jwt
+import datetime
+import os
+from django.conf import settings
 payload = { 
                 '__user': '0',
                 '__a': '1',
@@ -176,6 +181,20 @@ def facebook_search(name='Amazon',search='ALL'):
     fb_ad = facebook_ad_details(default_id) 
     return fb_ad
 
-   
+def email_sender(newemail):
+    # send_mail('Account verification','Please click on the link for account verification','magaranub@gmail.com',[newemail])
+    print(settings.SECRET_KEY)
+    return 'done'
 
-
+def token_genrator(email):
+    obj={'email':email,'exp':datetime.datetime.utcnow()+datetime.timedelta(minutes=5)}
+    secret=settings.SECRET_KEY
+    token=jwt.encode(obj,secret,algorithm='HS256')
+    bla=token_decoder(token)
+    print(bla)
+    return token
+def token_decoder(token):
+    secret=settings.SECRET_KEY
+    decoded=jwt.decode(token,secret,algorithm='HS256')
+    print(decoded['email'])
+    return decoded

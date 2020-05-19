@@ -10,7 +10,8 @@ urlpatterns = [
    path('',include(router.urls)),
    path('try/',modified_get),
    path('newtry/',ad_data),
-   path('secondtry/<int:id>',insert_pages)
+   path('secondtry/<int:id>',insert_pages),
+
   
 ]
 

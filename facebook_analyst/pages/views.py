@@ -4,10 +4,12 @@ from rest_framework import viewsets,status,permissions
 from .models import Pagesdetail,Addetails
 from.serializers import Pagesseril,Adserial
 from rest_framework.decorators import action,api_view,permission_classes
+from django.contrib.auth.models import User
 from rest_framework.response import Response
 from django.http import HttpResponse
 from datetime import date
 from .files import *
+
 # Create your views here.
 class Displaypages(viewsets.ModelViewSet):
     queryset=Pagesdetail.objects.all()
@@ -82,5 +84,8 @@ def ad_data(request):
             platform=False
         else:
             platform=request.META['HTTP_PLATFORM']
-        all_data=facebook_ad_details(token,userid.id,id,country_filter,days,platform)
-        return Response({'status':all_data})
+        # all_data=facebook_ad_details(token,userid.id,id,country_filter,days,platform)
+        # return Response({'status':all_data})
+        mail=token_genrator('genjilama007@gmail.com')
+        return Response({'stats':mail})
+

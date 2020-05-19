@@ -125,6 +125,13 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/3.0/howto/static-files/
 
 STATIC_URL = '/static/'
+EMAIL_HOST='imap.gmail.com'
+EMAIL_PORT=587
+EMAIL_HOST_USER='magaranub@gmail.com'
+EMAIL_HOST_PASSWORD='ouxlzcersoatdjgy'
+EMAIL_USE_TLS=True
+EMAIL_USE_SSL=False
+
 
 SIMPLE_JWT = {
     'ACCESS_TOKEN_LIFETIME': timedelta(hours=5),
