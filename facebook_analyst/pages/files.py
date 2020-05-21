@@ -5,7 +5,6 @@ from datetime import datetime
 from .models import Pagesdetail
 from django.core.mail import send_mail
 import jwt
-import datetime
 import os
 from django.conf import settings
 payload = { 

@@ -4,7 +4,7 @@ from .models import Pagesdetail,Addetails
 class Pagesseril(serializers.ModelSerializer):
     class Meta:
         model=Pagesdetail
-        fields=('id','page_id','page_name','socialmedia','page_info')
+        fields=('id','page_id','page_name','socialmedia','page_info','facebook_tracker','insatgram_tracker')
 
 class Adserial(serializers.ModelSerializer):
     class Meta:

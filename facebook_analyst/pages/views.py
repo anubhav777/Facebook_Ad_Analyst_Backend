@@ -15,8 +15,9 @@ class Displaypages(viewsets.ModelViewSet):
     queryset=Pagesdetail.objects.all()
     serializer_class=Pagesseril
 
-@api_view(['POST','PUT','DELETE'])
+@api_view(['POST','PUT','DELETE','GET'])
 def insert_pages(request,id=None):
+    new_user=request.user
     if request.method == "POST":
         product_id=request.META['HTTP_PRODUCTID']
         country=request.META['HTTP_COUNTRY']
@@ -30,12 +31,66 @@ def insert_pages(request,id=None):
         if not filter_data or filter_data == None:
             serializers=Pagesseril(data=prod_func)
         else:
+            old_date=None
+            new_date=date.today()
+            updated_date=new_date.strftime('%d-%m-%Y')
+            instagram_data=None
+            facebook_data=None
+            try:
+                old_date=filter_data.facebook_tracker['updated_date']
+            except Exception as e:
+                pass
+            if old_date == None or old_date != updated_date:
+                data=None
+                old_instagram_followers=filter_data.socialmedia['instagram_followers']
+                new_instagram_followers=prod_func['socialmedia']['instagram_followers'] - filter_data.socialmedia['instagram_followers']
+                instagram_status=None
+                old_facebook_like=filter_data.socialmedia['facebook_like']
+                new_facebook_like=prod_func['socialmedia']['facebook_like'] - filter_data.socialmedia['facebook_like']
+                facebook_status=None
+                if new_instagram_followers > 0:
+                    instagram_status='Increment'
+                else:
+                    instagram_status='Decrement'
+                if new_facebook_like > 0:
+                    facebook_status='Increment'
+                else:
+                    facebook_status='Decrement'
+                
+                instagram_data={'new_followers':new_instagram_followers,'instagram_status':instagram_status,'updated_date':updated_date}
+                facebook_data={'new_likes':new_facebook_like,'facebook_status':facebook_status,'updated_date':updated_date}
+                
+                
+                print(old_date)
+            else:
+                instagram_data=filter_data.insatgram_tracker
+                facebook_data=filter_data.facebook_tracker
+               
+            instagram={'insatgram_tracker':instagram_data}
+            facebook={'facebook_tracker':facebook_data}
+            prod_func.update(facebook)
+            prod_func.update(instagram)
+                
+            print(prod_func)
+            
             serializers=Pagesseril(filter_data,data=prod_func)
-        if serializers.is_valid():
-                serializers.save()
-                return Response({'status':'added'})
+            if serializers.is_valid():
+                    serializers.save()
+                    return Response({'status':'added'})
+            else:
+                    return Response({'status':'error'})
+    elif request.method == 'GET':
+        serializer = None
+        if not new_user.is_superuser:
+            queryobj=Pagesdetail.objects.filter(userid=new_user.id).all()
+            serializer=Pagesseril(queryobj,many=True)
         else:
-                return Response({'status':'error'})
+            queryobj=Pagesdetail.objects.all()
+            serializer=Pagesseril(queryobj,many=True)
+        return Response({'stats':serializer.data})
+        
+
+
     elif request.method == "DELETE":
         serializers=Pagesdetail.objects.get(pk=id)
         serializers.delete()
