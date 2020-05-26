@@ -1,16 +1,19 @@
 from django.shortcuts import render
 from django.core import serializers
 from rest_framework import viewsets,status,permissions
-from .models import Pagesdetail,Addetails
-from.serializers import Pagesseril,Adserial
+from .models import Pagesdetail,Addetails,Expiredads
+from.serializers import Pagesseril,Adserial,Expireserial
 from rest_framework.decorators import action,api_view,permission_classes
 from django.contrib.auth.models import User
 from rest_framework.response import Response
 from django.http import HttpResponse
 from datetime import date
+from datetime import datetime,date
 from .files import *
+from rest_framework.parsers import JSONParser
 
 # Create your views here.
+import json
 class Displaypages(viewsets.ModelViewSet):
     queryset=Pagesdetail.objects.all()
     serializer_class=Pagesseril
@@ -30,6 +33,11 @@ def insert_pages(request,id=None):
         serializers=None
         if not filter_data or filter_data == None:
             serializers=Pagesseril(data=prod_func)
+            if serializers.is_valid():
+                serializers.save()
+            else:
+                print(serializers.errors)
+            return Response({'status':'added'})
         else:
             old_date=None
             new_date=date.today()
@@ -102,7 +110,7 @@ def modified_get(request):
         queryobj=None
         new_user=request.user
         serializer=None
-        print(new_user.is_superuser,new_user.id)
+        # print(new_user.is_superuser,new_user.id)
         if(new_user.is_superuser):
             queryobj=Addetails.objects.all()
             serializer=Adserial(queryobj,many=True)
@@ -112,17 +120,31 @@ def modified_get(request):
             print(request.META['HTTP_AUTHORIZATION'])
         return Response(serializer.data)
     if request.method == "POST":
-            data_filter=Addetails.objects.filter(adid=request.data['adid'])
-            print(request.data)
-            if not data_filter:
+            data_filter=None
+            try:
+                data_filter=Addetails.objects.get(adid=request.data['adid'])
+            except Exception as e:
+                pass
+            # print(request.data)
+            if not data_filter or data_filter == None:
                 serializer=Adserial(data=request.data)
                 if serializer.is_valid():
+                    print('ho')
                     serializer.save()
                     return Response({'status': 'Data sucessfully added'})
                 else:
+                    
                     return Response(serializer.errors,status=status.HTTP_400_BAD_REQUEST)
             else:
-                return Response({'stats':'already added'})
+                print('hi')
+                serializer=Adserial(data_filter,data=request.data)
+                if serializer.is_valid():
+                    print('val')
+                    serializer.save()
+                    return Response({'stats':'updated sucessfully'})
+                else:
+                    print('error')
+                    return Response({'stats':'updated error'})
            
 
 @api_view(['POST'])
@@ -134,13 +156,38 @@ def ad_data(request):
         platform=None
         token=request.META['HTTP_AUTHORIZATION']
         userid=request.user
-        print(userid.id)
+        # print(userid.id)
         if request.META['HTTP_PLATFORM'] == "False":
             platform=False
         else:
             platform=request.META['HTTP_PLATFORM']
-        # all_data=facebook_ad_details(token,userid.id,id,country_filter,days,platform)
-        # return Response({'status':all_data})
-        mail=token_genrator('genjilama007@gmail.com')
-        return Response({'stats':mail})
+        all_data=facebook_ad_details(token,userid.id,'POST',id,country_filter,days,platform)
+        return Response({'status':all_data})
+        # mail=token_genrator('genjilama007@gmail.com')
+        # return Response({'stats':mail})
 
+@api_view(['GET'])
+def graph(request):
+   
+    des=ad_deserializer(9)
+    filt_func=graph_func(des['conv'])
+    print(filt_func)
+    # print(this_week_status)
+    filt_func.update({'data':des['serializer']})
+    return Response(filt_func)
+
+@api_view(['GET'])
+def date_end(request):
+    blob=end_date('9465008123')
+    return Response({'status':'hi'})
+@api_view(['GET'])
+def get_allads(request):
+    queryset=Expiredads.objects.all()
+    serializer=Expireserial(queryset,many=True)
+    return Response({'stats':serializer.data})
+
+@api_view(['GET'])
+def try_function(request):
+    
+    callfunc=geo_converter()
+    return Response({'status':callfunc})

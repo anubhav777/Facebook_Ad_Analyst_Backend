@@ -16,9 +16,16 @@ class Addetails(models.Model):
     adid=models.CharField(max_length=128,null=False)
     start_date=models.CharField(max_length=128,blank=True)
     end_date=models.CharField(max_length=128,blank=True)
+    created_time=models.CharField(max_length=128,blank=True)
     searched_date=models.DateField(default=timezone.now)
     ad_info=JSONField()
     productid=models.ForeignKey('Pagesdetail',on_delete=models.CASCADE)
     userid=models.ForeignKey(User,on_delete=models.CASCADE)
+
+class Expiredads(models.Model):
+    searched_date=models.DateField(default=timezone.now)
+    adsid=models.ForeignKey('Addetails',on_delete=models.CASCADE)
+    productid=models.ForeignKey('Pagesdetail',on_delete=models.CASCADE)
+
 
     

@@ -2,11 +2,18 @@ import json,lxml
 import requests
 from bs4 import BeautifulSoup
 from datetime import datetime
-from .models import Pagesdetail
 from django.core.mail import send_mail
 import jwt
 import os
 from django.conf import settings
+from datetime import date
+import pendulum
+from geopy.geocoders import Nominatim
+from.serializers import Pagesseril,Adserial,Expireserial
+from .models import Addetails,Pagesdetail,Expiredads
+from operator import itemgetter
+import pycountry
+json_fl=os.path.join('data','allcountry.json')
 payload = { 
                 '__user': '0',
                 '__a': '1',
@@ -57,7 +64,7 @@ def facebook_json(url):
 
 
 
-def facebook_ad_details(token,userid,id='9465008123',country_filter='ALL',days='lifetime',platform=False):
+def facebook_ad_details(token,userid,stats="Return",id='9465008123',country_filter='ALL',days='lifetime',platform=False):
     
     url=None
     if not platform:
@@ -81,12 +88,15 @@ def facebook_ad_details(token,userid,id='9465008123',country_filter='ALL',days='
                 end_date=child[0]['endDate']
             image_parent=child[0]['snapshot']
             content=image_parent['cards']
+            unformatted_creation_time=image_parent['creation_time']
+            date_conv=datetime.fromtimestamp(unformatted_creation_time)
+            created_time=date_conv.strftime("%d/%m/%Y, %H:%M:%S")
             image=None
             if len(content) ==0:
                 image=image_parent['images'][0]['original_image_url']
             else:
                 image=content[0]['original_image_url']
-            platform=child[0]['publisherPlatform'][0]
+            platform=child[0]['publisherPlatform']
             active_status=str(child[0]['isActive'])
             parent_owner=child[0]['pageName']
             owner=parent_owner.split(".")[0]
@@ -111,23 +121,48 @@ def facebook_ad_details(token,userid,id='9465008123',country_filter='ALL',days='
             productid=Pagesdetail.objects.filter(page_id=id)
 
             new_ad_info={"discription":discription,"facebook_url":facebook_url,"target":target,"owner":owner,"platform":platform,"active_status":active_status,"image_src":image}
-            ad_info=json.dumps(new_ad_info)
-            newobj=[{"adid":adid,"start_date":start_date,"end_date":end_date,"ad_info":new_ad_info}]
+
+            newobj=[{"adid":adid,"start_date":start_date,"end_date":end_date,"ad_info":new_ad_info,'created_time':created_time}]
             if len(newarr) < 1:
                 newarr=newobj
             else:
                 newarr.extend(newobj)
-            headers={
+            headers = {
                 'Authorization':token
             }
-            new_data=[{"adid":adid,"start_date":start_date,"end_date":end_date,"ad_info":ad_info,"productid":productid[0].id,"userid":userid}]
-            requests.post(url='http://127.0.0.1:8000/try/',data=new_data[0],headers=headers)
+            new_data=[{"adid":adid,"start_date":start_date,"end_date":end_date,"ad_info":new_ad_info,"productid":productid[0].id,"userid":userid,"created_time":created_time}]
+            if stats == "POST":
+                print('po')
+                # requests.post(url='http://127.0.0.1:8000/try/',data=new_data[0],headers=headers)
+                data_filter=None
+                try:
+                    data_filter=Addetails.objects.get(adid=new_data[0]['adid'])
+                except Exception as e:
+                    pass
+                # print(request.data)
+                if not data_filter or data_filter == None:
+                    serializer=Adserial(data=new_data[0])
+                    if serializer.is_valid():
+                        print('ho')
+                        serializer.save()
+                        
+                    else:
+                        print(serializer.errors)
+                else:
+                    serializer=Adserial(data_filter,data=new_data[0])
+                    if serializer.is_valid():
+                        print('val')
+                        serializer.save()
+                    
+                    else:
+                        print(serializer.errors)
             # print(ad_info,'hi',newobj[0]['ad_info'])
             # print(newobj[0]['ad_info'])
             
         
         except Exception as e:
             pass
+    print(stats)
     return newarr
 
 def facebook_ad_owner(page_id='9465008123',countries='ALL'):
@@ -197,3 +232,192 @@ def token_decoder(token):
     decoded=jwt.decode(token,secret,algorithm='HS256')
     print(decoded['email'])
     return decoded
+
+
+def week_filter(count,day):
+    amount=0
+    if(day  >= ((count-1) * 7) and day <=(count*7)):
+            # print(count)
+            amount+=1
+    else:
+            return False
+    return amount
+        
+def current_week_filter(day):
+    count = 1 
+    while (count <= 5):
+        week=week_filter(count,day)
+        if not week:
+            count+=1
+        else:
+            break
+    return count
+
+def graph_func(obj):
+    curr_date=date.today()
+    newyear,newmonth,newday=( str(x) for x in str(curr_date).split("-"))
+    # print(newyear , newmonth , newday)
+    new_weekday=pendulum.parse(f"{newyear}-{newmonth}-{newday}")
+    curr_weekday=new_weekday.week_of_month
+    # curr_day=newday
+    current_week=0
+    previous_week=0
+    this_week_status=''
+    android=0
+    webbrowser=0
+    apple=0
+    facebook=0
+    instagram=0
+    messenger=0
+    top_platform=None
+    for newdata in range(len(obj)):
+        
+        ad_target=obj[newdata]['ad_info']['target']
+        new_date=obj[newdata]['start_date'].split(",")[0]
+        # print(new_date,curr_date)
+        day,month,year=( x for x in new_date.split("/"))
+        toconv_weekday=pendulum.parse(f"{year}-{month}-{day}")
+        data_weekday=toconv_weekday.week_of_month
+
+        if curr_weekday == data_weekday:
+            current_week+=1
+        elif data_weekday == (int(curr_weekday) -1):
+            previous_week+=1
+        if ad_target == 'Web Browsers':
+            webbrowser+=1
+        elif ad_target == 'Apple Products':
+            apple+=1
+        else:
+            android+=1
+        platform=obj[newdata]['ad_info']['platform']
+
+        if len(platform) >= 3:
+            facebook+=1
+            instagram+=1
+            messenger+=1
+        elif "facebook" and "instagram" in platform:
+            facebook+=1
+            instagram+=1
+        elif "facebook" and "messenger" in platform:
+            facebook+=1
+            messenger+=1 
+        elif "messenger" and "instagram" in platform:
+            messenger+=1
+            instagram+=1
+        elif 'facebook' in platform:
+            facebook+=1
+        elif "messenger" in platform:
+            messenger+=1
+        else:
+            instagram+=1
+        # print(previous_week,current_week)
+    if previous_week < current_week:
+        this_week_status='Increment'
+    elif previous_week == curr_weekday:
+        this_week_status='Neutral'
+    else:
+        this_week_status='Decrement'
+    if facebook>=instagram and facebook>=messenger:
+        top_platform="facebook"
+    elif messenger>=facebook and messenger>=instagram:
+        top_platform="messenger"
+    else:
+        top_platform="instagram"
+    ad_target_obj={'apple':apple,'webbrowser':webbrowser,'android':android}
+    platform_obj={'top_platform':top_platform,'platform':{'facebook':facebook,'messenger':messenger,'instagram':instagram}}
+    return({'curr_week_ads': current_week,'prev_week_ad':previous_week,'curr_ad_status':this_week_status,'ad_target':ad_target_obj,'platforms':platform_obj})
+
+def ad_deserializer(id):
+    queryobj=Addetails.objects.filter(productid_id=id).all()
+    serializer=Adserial(queryobj,many=True)
+    jsoned=json.dumps(serializer.data)
+    conv=json.loads(jsoned)
+    
+    return {'conv':conv,'serializer':serializer.data}
+def end_date(product):
+    product_id=Pagesdetail.objects.get(page_id=product)
+    print(product_id.id)
+    conv_data=ad_deserializer(product_id.id)['conv']
+    count=0
+    new_count=0
+    
+    real_time_data=facebook_ad_details(0,1)
+    newarr=list(map(itemgetter('adid'),real_time_data))
+    expired_ad=[]
+    curr_date=date.today()
+    new_date=curr_date.strftime('%d-%m-%Y')
+    # print(conv_data)
+    for i in range(len(conv_data)):
+        
+        conv_data[i]['end_date']=new_date
+        print(conv_data[i]['id'])
+        if conv_data[i]['adid'] not in newarr:
+            newobj={'adsid':conv_data[i]['id'],'productid':conv_data[i]['productid']}
+            queryobj=None
+            try:
+                queryobj=Expiredads.objects.filter(adsid_id=conv_data[i]['id'])
+            except Exception as e:
+                pass
+            if not queryobj or queryobj == None:
+                serializer=Expireserial(data=newobj)
+                if serializer.is_valid():
+                        print('hop')
+                        serializer.save()
+                        
+                else:
+                    print(serializer.errors)
+
+                queryset=Addetails.objects.get(adid=conv_data[i]['adid'])
+                adserial=Adserial(queryset,conv_data[i])
+                if serializer.is_valid():
+                    serializer.save()
+                else:
+                    print(serializer.errors)
+            else:
+                print('already added')
+           
+           
+        else:
+            count+=1
+    obu={'bla':'lop'}
+    obu['bla']='kl'
+    print(obu)
+    return 'hi'
+
+# end_date(9465008123)
+def geo_identifier(name):
+    geo_data=None
+    with open('allcountry.json','r') as json_file:
+        new_json=json.load(json_file)
+        filt_json=new_json['features']
+        for country in range(len(filt_json)):
+            # print(filt_json[country]["properties"]['A3'])
+            if filt_json[country]["properties"]['A3'] == name:
+                geo_data= filt_json[country]
+    return geo_data 
+
+def geo_converter():
+    queryobj=Pagesdetail.objects.filter(pk=1).all()
+    serializer=Pagesseril(queryobj,many=True)
+    jsoned=json.dumps(serializer.data)
+    conv=json.loads(jsoned)
+    admins=conv[0]['page_info']['page_admins']
+    newarr=[]
+    new_split=admins.split(",")
+    
+    for count_data in range(len(new_split)):
+        data_split=(new_split[count_data]).rsplit(" ",1)
+        new_data=data_split[0]
+        country_name=pycountry.countries.search_fuzzy(new_data)
+        alpha=country_name[0].alpha_3
+        geo_converted=geo_identifier(alpha)
+        old_total=data_split[1].replace(")","").split("(")[1]
+        new_total=int(old_total)
+        geo_converted.update({'countryname':new_data,'total':new_total})
+        newarr.append(geo_converted)
+
+       
+
+    # print(newarr)
+    return newarr
+

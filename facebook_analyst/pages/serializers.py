@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Pagesdetail,Addetails
+from .models import Pagesdetail,Addetails,Expiredads
 
 class Pagesseril(serializers.ModelSerializer):
     class Meta:
@@ -9,4 +9,9 @@ class Pagesseril(serializers.ModelSerializer):
 class Adserial(serializers.ModelSerializer):
     class Meta:
         model=Addetails
-        fields=('id','adid','start_date','end_date','searched_date','ad_info','productid','userid')
+        fields=('id','adid','start_date','end_date','searched_date','ad_info','productid','userid','created_time')
+class Expireserial(serializers.ModelSerializer):
+    adsid=Adserial(read_only=True)
+    class Meta:
+        model=Expiredads
+        fields=('id','searched_date','productid','adsid')
