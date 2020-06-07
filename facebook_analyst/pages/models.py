@@ -9,6 +9,8 @@ class Pagesdetail(models.Model):
     page_name=models.CharField(max_length=128,null=False)
     socialmedia=JSONField()
     page_info=JSONField()
+    searched_date=models.DateField(default=timezone.now,blank=True)
+    total_ads=models.CharField(max_length=128,blank=True)
     insatgram_tracker=JSONField(blank=True,default=dict)
     facebook_tracker=JSONField(blank=True,default=dict)
 
@@ -27,5 +29,17 @@ class Expiredads(models.Model):
     adsid=models.ForeignKey('Addetails',on_delete=models.CASCADE)
     productid=models.ForeignKey('Pagesdetail',on_delete=models.CASCADE)
 
+class Socialmedia_tracker(models.Model):
+    fb_likes=models.CharField(max_length=128)
+    insta_likes=models.CharField(max_length=128)
+    fb_stats=models.CharField(max_length=128,blank=True)
+    insta_stats=models.CharField(max_length=128,blank=True)
+    date=models.DateField(default=timezone.now)
+    productid=models.ForeignKey('Pagesdetail',on_delete=models.CASCADE)
 
-    
+class Adstracker(models.Model):
+    year=models.CharField(max_length=128)
+    month=models.CharField(max_length=128)
+    date=models.CharField(max_length=128)
+    weekday=models.CharField(max_length=128)
+    adid=models.ForeignKey('Addetails',on_delete=models.CASCADE)

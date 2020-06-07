@@ -40,7 +40,8 @@ INSTALLED_APPS = [
     'rest_framework',
     'users_details',
     'pages',
-    'corsheaders'
+    'corsheaders',
+    
 ]
 
 MIDDLEWARE = [
@@ -172,7 +173,8 @@ REST_FRAMEWORK={
 CORS_ORIGIN_ALLOW_ALL = True # If this is used then `CORS_ORIGIN_WHITELIST` will not have any effect
 CORS_ALLOW_CREDENTIALS = True
 CORS_ORIGIN_WHITELIST = [
-    "http://localhost:3000"
+    "http://localhost:3000",
+    
 ]
 CORS_ALLOW_METHODS = [
     'DELETE',
@@ -181,4 +183,26 @@ CORS_ALLOW_METHODS = [
     'PATCH',
     'POST',
     'PUT',
+]
+
+CORS_ALLOW_HEADERS = [
+    'accept',
+    'accept-encoding',
+    'authorization',
+    'content-type',
+    'dnt',
+    'origin',
+    'user-agent',
+    'x-csrftoken',
+    'x-requested-with',
+    'pagename',
+    'productid',
+    'country',
+    'filter',
+    'platform',
+    'days',
+    'stats',
+    'month',
+    'week',
+    'seldate'
 ]

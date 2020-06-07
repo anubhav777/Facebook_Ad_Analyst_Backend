@@ -2,11 +2,15 @@ from django.shortcuts import render
 from rest_framework import viewsets,permissions
 from rest_framework.decorators import action,api_view
 from rest_framework.parsers import JSONParser
-from  .models import Usersearchhistory
-from .serializers import Userserializer,UserSearchdisp,Uservalidator
+from  .models import Usersearchhistory,Userpages
+from .serializers import Userserializer,Userpgseril,Userdisplayseril
+from pages.models import Pagesdetail
 from rest_framework.response import Response
 from django.contrib.auth.models import User
 import json
+from rest_framework.response import Response
+from datetime import date
+from .files import *
 # Create your views here.
 
 # @api_view(['POST',])
@@ -61,9 +65,9 @@ class signupform(viewsets.ModelViewSet):
 
 
 
-class displaysearch(viewsets.ModelViewSet):
-    queryset=Usersearchhistory.objects.all()
-    serializer_class=UserSearchdisp
+# class displaysearch(viewsets.ModelViewSet):
+#     queryset=Usersearchhistory.objects.all()
+#     serializer_class=UserSearchdisp
 
 
 @api_view(['POST'])
@@ -97,3 +101,55 @@ def reset_password(request,id):
         serializer.save()
         return Response({'status':'updated'})
     return Response({'sataus':'error'})
+@api_view(['POST','GET','DELETE'])
+def user_pages(request,id):
+    if request.method == "POST":
+        data_checker=None
+    
+        product_id=request.META['HTTP_PRODUCTID']
+        print(product_id)
+        userid=request.user.id
+        new_page_id=Pagesdetail.objects.get(page_id=product_id)
+        prodid=new_page_id.id
+        print(new_page_id.id,'hi')
+        bla=Userpages.objects.filter(productid=prodid,userid=userid).first()
+        print(bla)
+        try:
+            data_checker=Userpages.objects.filter(productid=prodid,userid=userid).first()
+            print(data_checker)
+        except Exception as e:
+            pass
+        if data_checker == None: 
+            data={
+                'productid':prodid,
+                'userid':userid,
+                'date':date.today()
+            }
+            print(data)
+            serializers=Userpgseril(data=data)
+            if serializers.is_valid():
+                serializers.save()
+            else:
+                print(serializers.errors)
+            print(product_id,userid,new_page_id.id)
+            return Response({'status':'success'})
+        else:
+            return Response({'status':'already uploaded'})
+    elif request.method == 'GET':
+        userid=request.user.id
+        queryset=None
+        if request.user.is_superuser:
+            queryset=Userpages.objects.all()
+            ad=admin_pages()
+            return Response({'status':ad})
+        else:
+            queryset=Userpages.objects.filter(userid=userid).all()
+
+        
+        serializers=Userdisplayseril(queryset,many=True)
+        
+        return Response({'status':serializers.data})
+    elif request.method == "DELETE":
+        serializers=Userpages.objects.get(pk=id)
+        serializers.delete()
+        return Response({'status':'success'})
