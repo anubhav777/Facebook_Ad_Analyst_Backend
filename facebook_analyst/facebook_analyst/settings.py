@@ -204,5 +204,7 @@ CORS_ALLOW_HEADERS = [
     'stats',
     'month',
     'week',
-    'seldate'
+    'seldate',
+    'filters',
+    'dates'
 ]

@@ -199,10 +199,28 @@ def ad_data(request):
         # return Response({'stats':mail})
     elif request.method == "GET":
         product_id=request.META['HTTP_PRODUCTID']
+        filters=request.META['HTTP_FILTERS']
+        dates=request.META['HTTP_DATES']
         prod=Pagesdetail.objects.get(page_id=product_id)
-        queryset=Addetails.objects.filter(productid=prod.id).all()
-        serializer=Adserial(queryset,many=True)
-        return Response({'stats':serializer.data})
+        if filters != 'Default' and dates!= 'Default':
+            queryset=Addetails.objects.filter(ad_info__platform__contains=[filters],start_date__contains=dates,productid=prod.id).all()
+            
+            serializer=Adserial(queryset,many=True)
+            return Response({'stats':serializer.data})
+        elif filters != 'Default':
+            queryset=Addetails.objects.filter(ad_info__platform__contains=[filters],productid=prod.id).all()
+            serializer=Adserial(queryset,many=True)
+            return Response({'stats':serializer.data})
+        elif dates!= 'Default':
+            queryset=Addetails.objects.filter(start_date__contains=dates,productid=prod.id).all()
+            print(queryset)
+            serializer=Adserial(queryset,many=True)
+            return Response({'stats':serializer.data})
+
+        else:
+            queryset=Addetails.objects.filter(productid=prod.id).all()
+            serializer=Adserial(queryset,many=True)
+            return Response({'stats':serializer.data})
 
 @api_view(['GET'])
 def graph(request):

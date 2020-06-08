@@ -7,6 +7,7 @@ class Pagesseril(serializers.ModelSerializer):
         fields=('id','page_id','page_name','socialmedia','searched_date','page_info','total_ads','facebook_tracker','insatgram_tracker')
 
 class Adserial(serializers.ModelSerializer):
+    productid=Pagesseril(read_only=True)
     class Meta:
         model=Addetails
         fields=('id','adid','start_date','end_date','searched_date','ad_info','productid','userid','created_time')
