@@ -228,7 +228,7 @@ def graph(request):
     queryset=Pagesdetail.objects.get(page_id=product_id)
    
     des=ad_deserializer(queryset.id)
-    filt_func=graph_func(des['conv'])
+    filt_func=graph_func(des['conv'],queryset.id)
    
     # print(this_week_status)
     filt_func.update({'data':des['serializer']})
@@ -342,3 +342,17 @@ def ads_analysis(request):
                     pass
          
           return Response({'status':newobj})
+@api_view(['GET'])
+def monthly_average(request):
+    product_id=request.META['HTTP_PRODUCTID']
+    query=Pagesdetail.objects.get(page_id=product_id)
+    serial=Pagesseril(query)
+    geo=admin_total(serial.data)
+    call_func=average_ads(query.id)
+    des=ad_deserializer(query.id)
+    filt_func=graph_func(des['conv'],query.id)
+    adsquery=Addetails.objects.filter(end_date='No end-date',productid=query.id).all()
+    # country_func=country_getter(product_id)
+
+    # print(country_func)
+    return Response({'status':serial.data,'avg':call_func,'total_admin':geo,'top_data':filt_func,'active_ads':len(adsquery)})

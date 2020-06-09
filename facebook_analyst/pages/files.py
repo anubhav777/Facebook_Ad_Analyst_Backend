@@ -155,7 +155,7 @@ def facebook_ad_details(userid,stats="Return",id='9465008123',country_filter='AL
                     if "\u200e" in discription:
                         discription=discription.replace("\u200e",'')
                     
-                    productid=Pagesdetail.objects.filter(page_id=id)
+                    productid=Pagesdetail.objects.filter(page_id=id).first()
                     
                     new_ad_info={"discription":discription,"facebook_url":facebook_url,"target":target,"owner":owner,"platform":platform,"active_status":active_status,"image_src":image}
 
@@ -165,7 +165,7 @@ def facebook_ad_details(userid,stats="Return",id='9465008123',country_filter='AL
                     else:
                         newarr.extend(newobj)
                     
-                    new_data=[{"adid":adid,"start_date":start_date,"end_date":end_date,"ad_info":new_ad_info,"productid":productid[0].id,"userid":userid,"created_time":created_time}]
+                    new_data=[{"adid":adid,"start_date":start_date,"end_date":end_date,"ad_info":new_ad_info,"productid":id,"userid":userid,"created_time":created_time}]
                 
                     if stats == "POST":
                     
@@ -318,7 +318,7 @@ def current_week_filter(day):
             break
     return count
 
-def graph_func(obj):
+def graph_func(obj,id):
     curr_date=date.today()
     newyear,newmonth,newday=( str(x) for x in str(curr_date).split("-"))
     # print(newyear , newmonth , newday)
@@ -334,8 +334,10 @@ def graph_func(obj):
     facebook=0
     instagram=0
     messenger=0
-    
+    top_device=None
     top_platform=None
+    monthly_average=average_ads(id)
+    print(monthly_average)
     for newdata in range(len(obj)):
         
         ad_target=obj[newdata]['ad_info']['target']
@@ -389,8 +391,16 @@ def graph_func(obj):
         top_platform="Messenger"
     else:
         top_platform="Instagram"
+    if apple >= webbrowser and apple >= android:
+        top_device='apple'
+    elif android >= webbrowser and android >= apple:
+        top_device='android'
+    else:
+        top_device='webbrowser'
+
     total=(facebook+messenger+instagram)
-    ad_target_obj={'apple':apple,'webbrowser':webbrowser,'android':android}
+    target_total=(android+webbrowser+apple)
+    ad_target_obj={'targets':{'apple':apple,'webbrowser':webbrowser,'android':android},'top_device':top_device,'total_target':target_total}
     platform_obj={'top_platform':top_platform,'platform':{'facebook':facebook,'messenger':messenger,'instagram':instagram},'total':total}
     return({'curr_week_ads': current_week,'prev_week_ad':previous_week,'curr_ad_status':this_week_status,'ad_target':ad_target_obj,'platforms':platform_obj})
 
@@ -472,13 +482,35 @@ def lat_long_getter(string):
     new_lon=location.longitude
     obj={'latitude':new_lat,'longitude':new_lon}
     return obj
+def admin_total(obj):
+    jsoned=json.dumps(obj)
+    conv=json.loads(jsoned)
+    admins=conv['page_info']['page_admins']
+    new_split=admins.split(",")
+    new_tot=0
+    main_target=None
+    for count_data in range(len(new_split)):
+        data_split=(new_split[count_data]).rsplit(" ",1)
+        old_total=data_split[1].replace(")","").split("(")[1]
+        new_total=int(old_total)
+        new_tot+=new_total
+        
+       
+    # all_tot=list(map(itemgetter('total'),newarr))
+    # admin_total=sum(all_tot)
+    # # print(admin_total)
+   
+    return (new_tot)
+
+    
+    
 
 def geo_converter(pgid):
-    queryobj=Pagesdetail.objects.filter(page_id=pgid).all()
-    serializer=Pagesseril(queryobj,many=True)
+    queryobj=Pagesdetail.objects.get(page_id=product_id)
+    serializer=Pagesseril(queryobj)
     jsoned=json.dumps(serializer.data)
     conv=json.loads(jsoned)
-    admins=conv[0]['page_info']['page_admins']
+    admins=conv['page_info']['page_admins']
     newarr=[]
     new_split=admins.split(",")
     new_tot=0
@@ -731,6 +763,36 @@ def overall_analysis(product_id,month,week='Default',date='Default'):
            
             sendarr=newobj        
     return sendarr
+def average_ads(id):
+    curr_month=datetime.now().month
+    new_arr=[]
+
+    for i in range(1,(curr_month)):
+        new_month=f"0{i}"
+        queryset=Adstracker.objects.filter(adid__productid=id,month=new_month).all()
+        new_arr.append(len(queryset))
+    total_ads=sum(new_arr)
+    abv_ads=round(total_ads/len(new_arr),2)
+    # print(round(abv_ads,2),total_ads,'hi',curr_month)
+    query=Socialmedia_tracker.objects.filter(productid=id).all()
+    srial=Socialmedia_seril(query,many=True)
+    dump=json.dumps(srial.data)
+    conv=json.loads(dump)
+    facebook_total=0
+    instagram_total=0
+    new_date=datetime.now().isocalendar()[1]
+    for i in range(len(conv)):
+        facebook_total+=int(conv[i]['fb_stats'])
+        instagram_total+=int(conv[i]['insta_stats'])
+    avg_fb_weekly=round(facebook_total/new_date,2)
+    avg_insta_weekly=round(instagram_total/new_date,2)
+   
+    newobj={'avg_monthly_ad':abv_ads,'avg_fb_weekly':avg_fb_weekly,'avg_insta_weekly':avg_insta_weekly}
+    return newobj
+
+ 
+
+    
 # def try_date(year,month,date):
    
 #     # year='2020'
