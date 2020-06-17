@@ -7,10 +7,13 @@ class Pagesseril(serializers.ModelSerializer):
         fields=('id','page_id','page_name','socialmedia','searched_date','page_info','total_ads','facebook_tracker','insatgram_tracker')
 
 class Adserial(serializers.ModelSerializer):
-    productid=Pagesseril(read_only=True)
+   
     class Meta:
         model=Addetails
-        fields=('id','adid','start_date','end_date','searched_date','ad_info','productid','userid','created_time')
+        fields=('id','adid','start_date','end_date','searched_date','ad_info','productid','userid','created_time','mul_type','mul_type_link')
+    def to_representation(self,instance):
+        self.fields['productid']=Pagesseril(read_only=True)
+        return super(Adserial,self).to_representation(instance)
 class Expireserial(serializers.ModelSerializer):
     adsid=Adserial(read_only=True)
     class Meta:
@@ -22,7 +25,10 @@ class Socialmedia_seril(serializers.ModelSerializer):
         fields=('id','fb_likes','insta_likes','fb_stats','insta_stats','date','productid')
 
 class Adsseril(serializers.ModelSerializer):
-    adid=Adserial(read_only=True)
+    
     class Meta:
         model=Adstracker
         fields=('id','year','month','date','weekday','adid')
+    def to_representation(self, instance):
+        self.fields['adid'] =  Adserial(read_only=True)
+        return super(Adsseril, self).to_representation(instance)

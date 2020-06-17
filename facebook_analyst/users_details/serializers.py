@@ -32,6 +32,10 @@ class Userdisplayseril(serializers.ModelSerializer):
     class Meta:
         model=Userpages
         fields=('id','date','productid','userid')
+    def to_representation(self,instance):
+        self.fields['productid']=Pagesseril(read_only=True)
+        return super(Userdisplayseril,self).to_representation(instance)
+
 class Uservalidator(serializers.ModelSerializer):
     class Meta:
         model=User

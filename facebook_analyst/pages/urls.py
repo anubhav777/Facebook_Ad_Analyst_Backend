@@ -1,6 +1,6 @@
 from django.urls import path,include
 from rest_framework import routers
-from .views import Displaypages,modified_get,ad_data,insert_pages,graph,date_end,get_allads,try_function,ads_page_display,country_list,ads_analysis,social_tracker,monthly_average
+from .views import Displaypages,modified_get,ad_data,insert_pages,graph,date_end,get_allads,try_function,ads_page_display,country_list,ads_analysis,social_tracker,monthly_average,blob
 from apscheduler.schedulers.background import BackgroundScheduler
 from .files import timeout
 scheduler=BackgroundScheduler()
@@ -22,7 +22,8 @@ urlpatterns = [
    path("getcountry/",country_list),
    path("getsocial/",social_tracker),
    path("adanalysis/",ads_analysis),
-   path('compare/',monthly_average)
+   path('compare/',monthly_average),
+   path('blob/',blob)
 
   
 ]

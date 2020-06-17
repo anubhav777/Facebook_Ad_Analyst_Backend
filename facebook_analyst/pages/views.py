@@ -201,26 +201,81 @@ def ad_data(request):
         product_id=request.META['HTTP_PRODUCTID']
         filters=request.META['HTTP_FILTERS']
         dates=request.META['HTTP_DATES']
+        stats=request.META['HTTP_STATS']
+        date_sort=request.META['HTTP_DATESORT']
+        multimed=request.META['HTTP_MULTIMED']
         prod=Pagesdetail.objects.get(page_id=product_id)
-        if filters != 'Default' and dates!= 'Default':
-            queryset=Addetails.objects.filter(ad_info__platform__contains=[filters],start_date__contains=dates,productid=prod.id).all()
+        queryset=None
+        new_date=None
+        try:
+            day,month,year=(str(x) for x in dates.split('/'))
+            new_date=f"{year}-{month}-{day}"
+        except:
+            pass
+        if stats != 'Default':
+            if stats == 'services':
+                queryset=Addetails.objects.filter(ad_info__target__contains='Web Browsers',productid=prod.id).all()
+            else:
+                queryset=Addetails.objects.filter(productid=prod.id).exclude(ad_info__target__contains='Web Browsers').all()
             
-            serializer=Adserial(queryset,many=True)
-            return Response({'stats':serializer.data})
+            
+        elif filters != 'Default' and dates!= 'Default' and date_sort != 'Default' and multimed !='Default':
+            print(1)
+            if date_sort == 'asc':
+                queryset=Addetails.objects.filter(ad_info__platform__contains=[filters],start_date__contains=new_date,productid=prod.id,mul_type__contains=multimed).order_by('-start_date').all()
+            else:
+                queryset=Addetails.objects.filter(ad_info__platform__contains=[filters],start_date__contains=new_date,productid=prod.id,mul_type__contains=multimed).order_by('start_date').all()
+        elif filters != 'Default' and multimed !='Default':
+            print(1)
+            queryset=Addetails.objects.filter(ad_info__platform__contains=[filters],mul_type__contains=multimed,productid=prod.id).all()
+        elif filters != 'Default' and dates!= 'Default':
+            print(1)
+            queryset=Addetails.objects.filter(ad_info__platform__contains=[filters],start_date__contains=new_date,productid=prod.id).all()
+        elif multimed !='Default' and date_sort != 'Default':
+            if date_sort == 'asc':
+                queryset=Addetails.objects.filter(mul_type__contains=multimed,productid=prod.id).order_by('-start_date').all()
+            else:
+                queryset=Addetails.objects.filter(mul_type__contains=multimed,productid=prod.id).order_by('start_date').all()
+        elif filters!= 'Default' and date_sort != 'Default':
+            if date_sort == 'asc':
+                queryset=Addetails.objects.filter(ad_info__platform__contains=[filters],productid=prod.id).order_by('-start_date').all()
+            else:
+                queryset=Addetails.objects.filter(ad_info__platform__contains=[filters],productid=prod.id).order_by('start_date').all()
+        elif dates!= 'Default' and date_sort != 'Default':
+            if date_sort == 'asc':
+                queryset=Addetails.objects.filter(start_date__contains=new_date,productid=prod.id).order_by('-start_date').all()
+            else:
+                queryset=Addetails.objects.filter(start_date__contains=new_date,productid=prod.id).order_by('start_date').all()
+        elif dates!= 'Default' and multimed !='Default':
+            print(1)
+            queryset=Addetails.objects.filter(mul_type__contains=multimed,start_date__contains=new_date,productid=prod.id).all()
+        elif date_sort !='Default':
+          
+            if date_sort == 'asc':
+                queryset=Addetails.objects.filter(productid=prod.id).order_by('-start_date').all()
+            else:
+                queryset=Addetails.objects.filter(productid=prod.id).order_by('start_date').all()
+           
         elif filters != 'Default':
+            print(2)
             queryset=Addetails.objects.filter(ad_info__platform__contains=[filters],productid=prod.id).all()
-            serializer=Adserial(queryset,many=True)
-            return Response({'stats':serializer.data})
+            
         elif dates!= 'Default':
-            queryset=Addetails.objects.filter(start_date__contains=dates,productid=prod.id).all()
-            print(queryset)
-            serializer=Adserial(queryset,many=True)
-            return Response({'stats':serializer.data})
+            print(3)
+            queryset=Addetails.objects.filter(start_date__contains=new_date,productid=prod.id).all()
+         
+        elif multimed!= 'Default':
+           
+                queryset=Addetails.objects.filter(mul_type__contains=multimed,productid=prod.id).all()
+         
 
         else:
+            print(4)
             queryset=Addetails.objects.filter(productid=prod.id).all()
-            serializer=Adserial(queryset,many=True)
-            return Response({'stats':serializer.data})
+           
+        serializer=Adserial(queryset,many=True)
+        return Response({'stats':serializer.data})
+          
 
 @api_view(['GET'])
 def graph(request):
@@ -229,9 +284,11 @@ def graph(request):
    
     des=ad_deserializer(queryset.id)
     filt_func=graph_func(des['conv'],queryset.id)
-   
+    adsquery=Addetails.objects.filter(end_date='No end-date',productid=queryset.id).all()
+    sponsor=Addetails.objects.filter(ad_info__target__contains='Web Browsers',productid=queryset.id).all()
     # print(this_week_status)
     filt_func.update({'data':des['serializer']})
+    filt_func.update({'active_ads':len(adsquery),'service_ad':len(sponsor)})
     return Response(filt_func)
 
 @api_view(['GET'])
@@ -262,10 +319,11 @@ def country_list(request):
     country=request.META['HTTP_COUNTRY']
     # print(product_id,country)
     call_func=None
-    if country != 'ALL':
+    if country != 'All':
         new_country=pycountry.countries.search_fuzzy(country)
         # print(new_country[0])
         param=new_country[0].alpha_2
+      
         call_func=country_getter(product_id,param)
     else:
         call_func=country_getter(product_id)
@@ -289,7 +347,7 @@ def ads_analysis(request):
     product_id=request.META['HTTP_PRODUCTID']
     new_month=monthly_analysis(month) 
     new_prod=Pagesdetail.objects.get(page_id=product_id)
-    newarr={'week1':0,'week2':0,'week3':0,'week4':0,'week5':0}
+    newarr={'week1':{'total':0,'facebook':0,'instagram':0},'week2':{'total':0,'facebook':0,'instagram':0},'week3':{'total':0,'facebook':0,'instagram':0},'week4':{'total':0,'facebook':0,'instagram':0},'week5':{'total':0,'facebook':0,'instagram':0}}
     check_month=f"0{new_month}" 
    
     if stats != 'weekly':
@@ -298,18 +356,53 @@ def ads_analysis(request):
         json_d=json.dumps(serializer.data)
         conv=json.loads(json_d)
         for i in range(len(conv)):
-            if new_prod.id == conv[i]['adid']['productid']:
+            if new_prod.id == conv[i]['adid']['productid']['id']:
            
                 if conv[i]['weekday'] == '1':
-                       newarr['week1']+=1                      
+                        newarr['week1']['total']+=1    
+                        if len(conv[i]['adid']['ad_info']['platform']) > 1:
+                            newarr['week1']['facebook']+=1
+                            newarr['week1']['instagram']+=1
+                        elif conv[i]['adid']['ad_info']['platform'][0] == 'facebook':
+                            newarr['week1']['facebook']+=1
+                        else:
+                            newarr['week1']['instagram']+=1                  
                 elif conv[i]['weekday'] == '2':
-                       newarr['week2']+=1
+                        newarr['week2']['total']+=1
+                        if len(conv[i]['adid']['ad_info']['platform']) > 1:
+                            newarr['week2']['facebook']+=1
+                            newarr['week2']['instagram']+=1
+                        elif conv[i]['adid']['ad_info']['platform'][0] == 'facebook':
+                            newarr['week2']['facebook']+=1
+                        else:
+                            newarr['week2']['instagram']+=1
                 elif conv[i]['weekday'] == '3':
-                        newarr['week3']+=1
+                        newarr['week3']['total']+=1
+                        if len(conv[i]['adid']['ad_info']['platform']) > 1:
+                            newarr['week3']['facebook']+=1
+                            newarr['week3']['instagram']+=1
+                        elif conv[i]['adid']['ad_info']['platform'][0] == 'facebook':
+                            newarr['week3']['facebook']+=1
+                        else:
+                            newarr['week3']['instagram']+=1
                 elif conv[i]['weekday'] == '4':
-                        newarr['week4']+=1
+                        newarr['week4']['total']+=1
+                        if len(conv[i]['adid']['ad_info']['platform']) > 1:
+                            newarr['week4']['facebook']+=1
+                            newarr['week4']['instagram']+=1
+                        elif conv[i]['adid']['ad_info']['platform'][0] == 'facebook':
+                            newarr['week4']['facebook']+=1
+                        else:
+                            newarr['week4']['instagram']+=1
                 elif conv[i]['weekday'] == '5':
-                        newarr['week5']+=1
+                        newarr['week5']['total']+=1
+                        if len(conv[i]['adid']['ad_info']['platform']) > 1:
+                            newarr['week5']['facebook']+=1
+                            newarr['week5']['instagram']+=1
+                        elif conv[i]['adid']['ad_info']['platform'][0] == 'facebook':
+                            newarr['week5']['facebook']+=1
+                        else:
+                            newarr['week5']['instagram']+=1
         return Response({'status':newarr})
     else:
           queryset=Adstracker.objects.filter(month=check_month,weekday=week).all()
@@ -331,28 +424,52 @@ def ads_analysis(request):
             new_date=start+timedelta(days=i)
             curr_date=new_date.strftime("%d")
             datearr.append(curr_date)
-            newobj.update({curr_date:0})
+            face="faecbook"
+            insta="instagram"
+            newobj.update({curr_date:{'total':0,face:0,insta:0}})
           
           for i in range(len(conv)):
-            if new_prod.id == conv[i]['adid']['productid']:
+           
+            if new_prod.id == conv[i]['adid']['productid']['id']:
                 if conv[i]['date'] in datearr:
+                    
                     dg=conv[i]['date']
-                    print(newobj[dg])
-                    newobj[dg]+=1
-                    pass
-         
+                   
+                    newobj[dg]['total']+=1
+                    fb="faecbook"
+                    ins="instagram"
+                    
+                    if len(conv[i]['adid']['ad_info']['platform']) > 1:
+                        newobj[dg][fb]+=1
+                        newobj[dg][ins]+=1
+                    elif conv[i]['adid']['ad_info']['platform'][0] == 'facebook':
+                        newobj[dg][fb]+=1
+                    else:
+                        newobj[dg][ins]+=1
+
+       
+                    
+        
           return Response({'status':newobj})
 @api_view(['GET'])
 def monthly_average(request):
     product_id=request.META['HTTP_PRODUCTID']
     query=Pagesdetail.objects.get(page_id=product_id)
-    serial=Pagesseril(query)
+    serial=Pagesseril(query) 
     geo=admin_total(serial.data)
     call_func=average_ads(query.id)
     des=ad_deserializer(query.id)
     filt_func=graph_func(des['conv'],query.id)
     adsquery=Addetails.objects.filter(end_date='No end-date',productid=query.id).all()
+    sponsor=Addetails.objects.filter(ad_info__target__contains='Web Browsers',productid=query.id).all()
+    video_ad=Addetails.objects.filter(mul_type__contains='video',productid=query.id).all()
     # country_func=country_getter(product_id)
 
     # print(country_func)
-    return Response({'status':serial.data,'avg':call_func,'total_admin':geo,'top_data':filt_func,'active_ads':len(adsquery)})
+    return Response({'status':serial.data,'avg':call_func,'total_admin':geo,'top_data':filt_func,'active_ads':len(adsquery),'sponsor':len(sponsor),'video_ad':len(video_ad)})
+
+@api_view(['GET'])
+def blob(request):
+    
+    call=update_date()
+    return Response({'status':'hi'})

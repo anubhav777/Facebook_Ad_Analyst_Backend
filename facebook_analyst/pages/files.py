@@ -78,34 +78,35 @@ def facebook_json(url):
     return json_data
 
 
-def facebook_ad_details(userid,stats="Return",id='9465008123',country_filter='ALL',days='lifetime',platform=False):
+def facebook_ad_details(userid,stats="Return",ids='9465008123',country_filter='ALL',days='lifetime',platform=False):
     
     url=None
     if not platform:
-        url=f'https://www.facebook.com/ads/library/async/search_ads/?session_id=dc2f0027-ea5d-4ad1-ba9a-cd9b5bbe5011&count=200&active_status=all&ad_type=all&countries[0]={country_filter}&impression_search_field=has_impressions_{days}&view_all_page_id={id}&sort_data[direction]=desc&sort_data[mode]=relevancy_monthly_grouped'
+        url=f'https://www.facebook.com/ads/library/async/search_ads/?session_id=dc2f0027-ea5d-4ad1-ba9a-cd9b5bbe5011&count=500&active_status=all&ad_type=all&countries[0]={country_filter}&impression_search_field=has_impressions_{days}&view_all_page_id={ids}&sort_data[direction]=desc&sort_data[mode]=relevancy_monthly_grouped'
     else:
-        url=f'https://www.facebook.com/ads/library/async/search_ads/?session_id=dc2f0027-ea5d-4ad1-ba9a-cd9b5bbe5011&count=30&active_status=all&ad_type=all&countries[0]={country_filter}&impression_search_field=has_impressions_{days}&view_all_page_id={id}&publisher_platforms[0]={platform}&sort_data[direction]=desc&sort_data[mode]=relevancy_monthly_grouped'
+        url=f'https://www.facebook.com/ads/library/async/search_ads/?session_id=dc2f0027-ea5d-4ad1-ba9a-cd9b5bbe5011&count=30&active_status=all&ad_type=all&countries[0]={country_filter}&impression_search_field=has_impressions_{days}&view_all_page_id={ids}&publisher_platforms[0]={platform}&sort_data[direction]=desc&sort_data[mode]=relevancy_monthly_grouped'
     print(id)
     json_data=facebook_json(url)
     if json_data == None:
+        print('e')
         return False
     else:
         parentclass=json_data['payload']['results']
         
         newarr=[]
+        prod=Pagesdetail.objects.get(page_id=ids)
         if stats == 'Length':
         
             return (len(parentclass))
         else:
-
+         
             for child in parentclass:
-                try:
-
+                
                     adid=child[0]['adArchiveID']
                     
                     code_date=child[0]['startDate']
                     new_date=datetime.fromtimestamp(code_date)
-                    start_date=new_date.strftime("%d/%m/%Y, %H:%M:%S")
+                    start_date=new_date.strftime("%Y-%m-%d, %H:%M:%S")
                     end_date=None
                     if child[0]['endDate'] == None:
                         end_date="No end-date"
@@ -113,15 +114,34 @@ def facebook_ad_details(userid,stats="Return",id='9465008123',country_filter='AL
                         end_date=child[0]['endDate']
                     image_parent=child[0]['snapshot']
                     content=image_parent['cards']
+                    video=image_parent['videos']
                     unformatted_creation_time=image_parent['creation_time']
                     date_conv=datetime.fromtimestamp(unformatted_creation_time)
                     created_time=date_conv.strftime("%d/%m/%Y, %H:%M:%S")
+                    mul_type='image'
+                    mul_type_link='No Link'
+                    image='No img'
+                    print(adid,prod.id)
                     
-                    image=None
-                    if len(content) ==0:
-                        image=image_parent['images'][0]['original_image_url']
-                    else:
-                        image=content[0]['original_image_url']
+                    try:
+                        if len(video) >=1:
+                            mul_type='video'
+                            image=video[0]['video_preview_image_url']
+                            mul_type_link=video[0]['video_sd_url']
+                        elif len(content) ==0:
+                           
+                            image=image_parent['images'][0]['original_image_url']
+                        elif 'video_preview_image_url' in content[0]:
+                            mul_type='video'
+                            image=content[0]['video_preview_image_url']
+                            mul_type_link=content[0]['video_sd_url']
+
+                        else:
+                           
+                            image=content[0]['original_image_url']
+                    except Exception as e:
+                         print(e) 
+                    print(mul_type_link)
                     platform=child[0]['publisherPlatform']
                     active_status=str(child[0]['isActive'])
                     parent_owner=child[0]['pageName']
@@ -131,7 +151,7 @@ def facebook_ad_details(userid,stats="Return",id='9465008123',country_filter='AL
                     discription=None
                     pagename=child[0]['pageName'].lower()
                     weburl=image_parent['caption']
-                    
+                    search_date=date.today()
 
                     if weburl == "itunes.apple.com":
                         target="Apple Products"
@@ -155,50 +175,51 @@ def facebook_ad_details(userid,stats="Return",id='9465008123',country_filter='AL
                     if "\u200e" in discription:
                         discription=discription.replace("\u200e",'')
                     
-                    productid=Pagesdetail.objects.filter(page_id=id).first()
+                    
                     
                     new_ad_info={"discription":discription,"facebook_url":facebook_url,"target":target,"owner":owner,"platform":platform,"active_status":active_status,"image_src":image}
 
-                    newobj=[{"adid":adid,"start_date":start_date,"end_date":end_date,"ad_info":new_ad_info,'created_time':created_time}]
+                    newobj=[{"adid":adid,"start_date":start_date,"end_date":end_date,"ad_info":new_ad_info,'created_time':created_time,'mul_type':mul_type,'mul_type_link':mul_type_link}]
                     if len(newarr) < 1:
                         newarr=newobj
                     else:
                         newarr.extend(newobj)
                     
-                    new_data=[{"adid":adid,"start_date":start_date,"end_date":end_date,"ad_info":new_ad_info,"productid":id,"userid":userid,"created_time":created_time}]
-                
+                    new_data={"adid":adid,"start_date":start_date,'searched_date':search_date,"end_date":end_date,"ad_info":new_ad_info,"productid":prod.pk,"userid":userid,"created_time":created_time,'mul_type':mul_type,'mul_type_link':mul_type_link}
+                    print(prod.pk,'hi')
                     if stats == "POST":
                     
                         data_filter=None
                         try:
-                            data_filter=Addetails.objects.get(adid=new_data[0]['adid'])
+                            data_filter=Addetails.objects.get(adid=new_data['adid'])
                         except Exception as e:
                             pass
                         # print(request.data)
                         if not data_filter or data_filter == None:
-                            serializer=Adserial(data=new_data[0])
+                            print(new_data)
+                            serializer=Adserial(data=new_data)
                             if serializer.is_valid():
-                            
+                                print('saved')
                                 serializer.save()
                                 
                             else:
-                                print(serializer.errors)
+                                print('lo',serializer.errors)
                         else:
-                            serializer=Adserial(data_filter,data=new_data[0])
+                            print('updated')
+                            serializer=Adserial(data_filter,data=new_data)
                             if serializer.is_valid():
                             
                                 serializer.save()
                             
                             else:
-                                print(serializer.errors)
+                                print('li',serializer.errors)
                     # print(ad_info,'hi',newobj[0]['ad_info'])
                     # print(newobj[0]['ad_info'])
                     
-                
-                except Exception as e:
-                    print(e)
-    
-            return newarr
+            return newarr    
+          
+          
+            
 
 def facebook_ad_owner(page_id='9465008123',countries='ALL',newuser="1"):
    
@@ -277,6 +298,7 @@ def country_getter(id,country='ALL'):
         for key,val in new_obj.items():
            
             newobj={'state':key,'ads':val['count']}
+            newarr.append(newobj)
             
     return newarr
 
@@ -337,20 +359,22 @@ def graph_func(obj,id):
     top_device=None
     top_platform=None
     monthly_average=average_ads(id)
-    print(monthly_average)
+   
     for newdata in range(len(obj)):
         
         ad_target=obj[newdata]['ad_info']['target']
         new_date=obj[newdata]['start_date'].split(",")[0]
         # print(new_date,curr_date)
-        day,month,year=( x for x in new_date.split("/"))
+        year,month,day=( x for x in new_date.split("-"))
         toconv_weekday=pendulum.parse(f"{year}-{month}-{day}")
         data_weekday=toconv_weekday.week_of_month
-
-        if curr_weekday == data_weekday:
-            current_week+=1
-        elif data_weekday == (int(curr_weekday) -1):
-            previous_week+=1
+        print(month,newmonth,'hi')
+        if newyear == year and newmonth == month:
+            if curr_weekday == data_weekday:
+                current_week+=1
+            elif data_weekday == (int(curr_weekday) -1):
+                previous_week+=1
+        
         if ad_target == 'Web Browsers':
             webbrowser+=1
         elif ad_target == 'Apple Products':
@@ -402,7 +426,7 @@ def graph_func(obj,id):
     target_total=(android+webbrowser+apple)
     ad_target_obj={'targets':{'apple':apple,'webbrowser':webbrowser,'android':android},'top_device':top_device,'total_target':target_total}
     platform_obj={'top_platform':top_platform,'platform':{'facebook':facebook,'messenger':messenger,'instagram':instagram},'total':total}
-    return({'curr_week_ads': current_week,'prev_week_ad':previous_week,'curr_ad_status':this_week_status,'ad_target':ad_target_obj,'platforms':platform_obj})
+    return({'curr_week_ads': current_week,'prev_week_ad':previous_week,'curr_ad_status':this_week_status,'ad_target':ad_target_obj,'platforms':platform_obj,'avg':monthly_average})
 
 def ad_deserializer(id):
     queryobj=Addetails.objects.filter(productid_id=id).all()
@@ -506,7 +530,7 @@ def admin_total(obj):
     
 
 def geo_converter(pgid):
-    queryobj=Pagesdetail.objects.get(page_id=product_id)
+    queryobj=Pagesdetail.objects.get(page_id=pgid)
     serializer=Pagesseril(queryobj)
     jsoned=json.dumps(serializer.data)
     conv=json.loads(jsoned)
@@ -644,7 +668,7 @@ def adstracker_data(product_id):
     for i in range(len(conv_data)):
        
         new_date=conv_data[i]['start_date'].rsplit(',')[0]
-        day, month, year =(str(x) for x in new_date.split('/'))
+        year, month, day =(str(x) for x in new_date.split('-'))
         weekday_parse=pendulum.parse(f"{year}-{month}-{day}")
         weekday=weekday_parse.week_of_month
         object_fill=None
@@ -653,8 +677,8 @@ def adstracker_data(product_id):
         except Exception as e:
             pass
       
-        if object_fill == None or not object_fill:
-            print('ho')
+        if object_fill == None :
+            print(conv_data[i]['id'])
             try:
                 data={
                     'year':year,
@@ -663,14 +687,15 @@ def adstracker_data(product_id):
                     'weekday':weekday,
                     'adid':conv_data[i]['id']
                 }
-        
+                print(data)
                 serializer=Adsseril(data=data)
                 if serializer.is_valid():
+                    print('yoo')
                     serializer.save()
                 else:
                     print(serializer.errors)
             except Exception as e:
-                pass
+                print(e)
         
         
     return 'hi'
@@ -685,6 +710,8 @@ def timeout():
     conv=json.loads(jsoned)
     print('runned')
     for i in range(len(conv)):
+    
+
         page_getter(conv[i]['page_id'],'ALL','1')
         adstracker_data(conv[i]['page_id'])
         facebook_ad_details(1,'POST',conv[i]['page_id'])
@@ -758,8 +785,7 @@ def overall_analysis(product_id,month,week='Default',date='Default'):
                     elif curr_weekday == 5:
                         newobj['facebook_like']['week5']+=int(conv[i]['fb_stats'])
                         newobj['instagram_like']['week5']+=int(conv[i]['insta_stats'])
-            print(newobj)
-
+           
            
             sendarr=newobj        
     return sendarr
@@ -791,7 +817,35 @@ def average_ads(id):
     return newobj
 
  
-
+def update_date():
+    query=Pagesdetail.objects.all()
+    seril=Pagesseril(query,many=True)
+    json_d=json.dumps(seril.data)
+    conv=json.loads(json_d)
+    for i in range(len(conv)):
+        print(conv[i]['id'])
+        newquery=Addetails.objects.filter(productid=conv[i]['id']).all()
+        new_seril=Adserial(newquery,many=True)
+        json_do=json.dumps(new_seril.data)
+        new_conv=json.loads(json_do)
+        
+        for j in range(len(new_conv)):
+         
+           
+        #     new_conv[j]['start_date']=updated
+           
+            new_query=Addetails.objects.get(adid=new_conv[j]['adid'])
+       
+            new_conv[j]['mul_type_link']='No Link'
+            # new_conv[j]['productid']=conv[i]['id']
+            srl=Adserial(new_query,data=new_conv[j])
+            if srl.is_valid():
+                srl.save()
+            else:
+                print(srl.errors)
+            
+            
+            
     
 # def try_date(year,month,date):
    

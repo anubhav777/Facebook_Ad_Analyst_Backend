@@ -21,6 +21,8 @@ class Addetails(models.Model):
     created_time=models.CharField(max_length=128,blank=True)
     searched_date=models.DateField(default=timezone.now)
     ad_info=JSONField()
+    mul_type=models.CharField(max_length=128,blank=True)
+    mul_type_link=models.CharField(max_length=5000,blank=True)
     productid=models.ForeignKey('Pagesdetail',on_delete=models.CASCADE)
     userid=models.ForeignKey(User,on_delete=models.CASCADE)
 

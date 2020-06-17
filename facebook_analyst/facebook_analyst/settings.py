@@ -206,5 +206,7 @@ CORS_ALLOW_HEADERS = [
     'week',
     'seldate',
     'filters',
-    'dates'
+    'dates',
+    'datesort',
+    'multimed'
 ]
