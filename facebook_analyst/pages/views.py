@@ -28,8 +28,9 @@ def insert_pages(request,id=None):
         product_id=request.META['HTTP_PRODUCTID']
         country=request.META['HTTP_COUNTRY']
         new_func=page_getter(product_id,country,new_user.id)
+        user_id=request.user
        
-        return Response({'stats':new_func})
+        return Response({'stats':new_func,'userid':user_id.id})
         
         # call_func=country_getter(product_id)
       

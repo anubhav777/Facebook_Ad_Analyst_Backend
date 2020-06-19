@@ -208,5 +208,8 @@ CORS_ALLOW_HEADERS = [
     'filters',
     'dates',
     'datesort',
-    'multimed'
+    'multimed',
+    'username',
+    'email',
+    'password'
 ]

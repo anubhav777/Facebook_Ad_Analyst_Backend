@@ -1,9 +1,9 @@
 from django.shortcuts import render
 from rest_framework import viewsets,permissions
-from rest_framework.decorators import action,api_view
+from rest_framework.decorators import action,api_view,permission_classes
 from rest_framework.parsers import JSONParser
 from  .models import Usersearchhistory,Userpages
-from .serializers import Userserializer,Userpgseril,Userdisplayseril
+from .serializers import Userserializer,Userpgseril,Userdisplayseril,Uservalidator
 from pages.models import Pagesdetail
 from rest_framework.response import Response
 from django.contrib.auth.models import User
@@ -40,50 +40,48 @@ class signupform(viewsets.ModelViewSet):
             self.permission_classes = (permissions.AllowAny,)
         return super(signupform,self).get_permissions()
 
-    # @action(detail=False,methods=['get','delete'])
-    # def newuser(self,request,**kwargs):
-    #     queryset=User.objects.all()
-    #     serializer_class=Userserializer
-    #     permission_classes=(permissions.IsAuthenticated)
-    #     result={'hi':'hi'}
-    #     return Response({'status':result})
-       
-    #     # print('hi')
-    #     # if request.method == "POST":
-    #     #     data={
-    #     #         'username':request.data['username'],
-    #     #         'email':request.data['email'],
-    #     #         'password':request.data['password']
-    #     #     }
-    #     #     serializer=Userserializer(data=data)
-    #     #     if serializer.is_valid():
-    #     #         serializer.save()
-    #     #         return Response({'status': 'User sucessfully registered'})
-    #     #     else:
-    #     #         return Response({'status':'sorry a problem encountered'})
-        
+@api_view(['POST'])
+@permission_classes([permissions.AllowAny,])
+def signup_user(request):
+    em=request.data['email']
+    check_user=None
+    try:
+        check_user=User.objects.filter(email=request.data['email']).first()
+    except Exception as e:
+        pass
+    if check_user == None:
+        seril=Userserializer(data=request.data)
+        if seril.is_valid():
+            seril.save()
+            token_genrator(em)
+            return Response({'status':'success'})
+        else:
+            print(seril.errors)
+    return Response({'status':'error'})
 
 
-
-# class displaysearch(viewsets.ModelViewSet):
-#     queryset=Usersearchhistory.objects.all()
-#     serializer_class=UserSearchdisp
 
 
 @api_view(['POST'])
-def email_validator(request,email):
-    new_user=User.objects.get(email=email)
+@permission_classes([permissions.AllowAny,])
+def email_validator(request):
+    email=request.data['token']
+    tok=token_decoder(email)
+    
+    new_user=User.objects.get(email=tok['email'])
+    
     print(new_user)
-    # data={
-    # }
-    # data["is_staff"]="True"
+ 
+    data={
+    }
+    data["is_staff"]="True"
    
     print(request.data)
 
-    serializers=Uservalidator(new_user,data=request.data)
+    serializers=Uservalidator(new_user,data=data)
     if serializers.is_valid():
         serializers.save()
-        return Response({'status':'hi'})
+        return Response({'status':'success'})
     else:
         return Response({'status':'err'})
 

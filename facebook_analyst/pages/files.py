@@ -162,7 +162,7 @@ def facebook_ad_details(userid,stats="Return",ids='9465008123',country_filter='A
                     
                     facebook_url=image_parent['page_profile_uri']
                     main_disc=image_parent['link_description']
-                
+                    
                     if main_disc == None or main_disc == pagename :
                     
                         if len(content) == 0:
@@ -170,8 +170,12 @@ def facebook_ad_details(userid,stats="Return",ids='9465008123',country_filter='A
                             
                         else:
                             discription=content[0]['title']
+                    elif "{" in main_disc:
+                        if len(content)!=0:
+                            discription = content[0]['body']
                     else:
                         discription=main_disc
+                    
                     if "\u200e" in discription:
                         discription=discription.replace("\u200e",'')
                     
