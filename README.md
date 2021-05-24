@@ -15,9 +15,9 @@ Facebook AD Analyst is a web scrapper that scrapes all the information regarding
 In order to use the app the user must first install all pip dependencies through the provided requirements.txt and for the front end they must install npm dependencies In order to combine the users custom frontend with the Facebook Ad Analyst backend they must update the setting.py file<br>
 
 <h4>To install npm dependencies</h4>
+
 ```
 pip3 install -r requirements.txt
-
 ```
 
 <br>
